@@ -14,7 +14,13 @@ st.write("The name on your Smoothie will be:", name_on_order)
 cnx = st.connection("snowflake")
 session = cnx.session()
 
-my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
+# FRUIT_NAMEとSEARCH_ONの両方を取得する
+my_dataframe = session.table("smoothies.public.fruit_options").select(
+    col('FRUIT_NAME'), col('SEARCH_ON')
+)
+
+# Snowpark DataFrameをPandas DataFrameに変換しておく(後で検索しやすくするため)
+pd_df = my_dataframe.to_pandas()
 
 ingredients_list = st.multiselect(
     'Choose up to 5 ingredients:'
@@ -28,8 +34,11 @@ if ingredients_list:
     for fruit_chosen in ingredients_list:
         ingredients_string += fruit_chosen + ' '
 
+        # 選ばれたFRUIT_NAMEに対応するSEARCH_ONの値を取り出す
+        search_on = pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
+
         st.subheader(fruit_chosen + ' Nutrition Information')
-        smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/" + fruit_chosen)
+        smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/" + search_on)
         sf_df = st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
 
     if st.button("Submit Order"):
